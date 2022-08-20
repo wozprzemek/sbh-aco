@@ -1,4 +1,3 @@
-from operator import le
 import random
 import copy
 
@@ -8,12 +7,14 @@ K = 8 # slice length
 NEG = int(0.06 * (N-K+1)) # negative error percentage
 POS = int(0.1 * (N-K+1)) # positive error percentage
 
+
 def generate_sequence():
     return [random.choice(NUCLEOTIDES) for i in range(N)]
 
 
 def generate_spectrum(sequence):
     return [''.join(sequence[i:K+i]) for i in range(N-K+1)]
+
 
 def write_to_file(filename, n, k, spectrum):
     with open(filename, 'w') as file:
@@ -44,7 +45,7 @@ def apply_positive_error(spectrum, pos):
 sequence = generate_sequence()
 spectrum = generate_spectrum(sequence)
 
-apply_negative_error(spectrum, NEG)
-apply_positive_error(spectrum, POS)
+spectrum = apply_negative_error(spectrum, NEG)
+spectrum = apply_positive_error(spectrum, POS)
 
-write_to_file('input.txt', N, K, spectrum)
+write_to_file('../src/input.txt', N, K, spectrum)
