@@ -130,7 +130,7 @@ public:
 
 
 int overlap(std::string a, std::string b, int len) {
-    int overlap_score = 0;
+    int overlap_score = len;
     for (int i=1; i<len+1; i++) {
         std::string a_start =  a.substr(0, i);
         std::string b_end = b.substr(len - i, i);
@@ -139,14 +139,16 @@ int overlap(std::string a, std::string b, int len) {
         std::string b_start = b.substr(0, i);
 
         if (a_start == b_end || a_end == b_start) {
-            overlap_score += len - i;  // lower overlap_score == bigger overlap
+            if (len - i < overlap_score) {
+                overlap_score = len - i;
+            }  // lower overlap_score == bigger overlap
         }
     }
     
     return overlap_score;
 }
 
-double calculate_lk(Ant ant, vector<vector<double>> overlaps, int n) {
+double calculate_lk(Ant ant, vector<vector<int>> overlaps, int n) {
     float Lk = 0;
     for (int i = 1; i < n + 1; i++) {
         Lk += overlaps[ant.path[i - 1]][ant.path[i]];
@@ -202,14 +204,15 @@ vector<vector<double>> calculate_visibilities(vector<Oligo> oligos, int n, int k
 }
 
 
-vector<vector<double>> calculate_overlaps(vector<Oligo> oligos, int n, int k) {
-    vector<vector<double>> overlaps;
-    vector<double> row;
-    double overlap_tmp;
+vector<vector<int>> calculate_overlaps(vector<Oligo> oligos, int n, int k) {
+    vector<vector<int>> overlaps;
+    vector<int> row;
+    int overlap_tmp;
     for (int i = 0; i < n; i++) {
         row.clear();
         for (int j = 0; j < n; j++) {
             overlap_tmp = overlap(oligos[i].sequence, oligos[j].sequence, k);
+            cout << oligos[i].sequence << " " << oligos[j].sequence << " " << overlap_tmp << endl;
             row.push_back(overlap_tmp);
         }
         overlaps.push_back(row);
@@ -245,7 +248,7 @@ int main(int argc, char * argv[]) {
 
     srand(time(NULL));
     double minimum = 1000000;
-    int iteration_number = 2000;
+    int iteration_number = 100;
     vector<int> path;
     string filename = argv[1];
     double Lk;
@@ -267,11 +270,11 @@ int main(int argc, char * argv[]) {
         index++;
     }
 
-    vector<vector<double>> oligo_overlaps = calculate_overlaps(spectrum, n, k); //initialize oligo overlap table
+    vector<vector<int>> oligo_overlaps = calculate_overlaps(spectrum, n, k); //initialize oligo overlap table
     vector<vector<double>> oligo_visibilities = calculate_visibilities(spectrum, n, k); //initialize oligo visibilities table
     vector<vector<double>> T = initialize_pheromones(n); //initialize pheromones table
 
-    /* ------test oligo visibilities------ */
+    // /* ------test oligo visibilities------ */
     // for (int i=0; i<n; i++){
     //     for (int j=0; j<n; j++){
     //         cout << oligo_visibilities[i][j] << " ";
@@ -279,16 +282,18 @@ int main(int argc, char * argv[]) {
     //     cout << endl;
     // }
 
-    /* ------test oligo distances------ */
+    /* ------test oligo overlaps------ */
+    // cout << oligo_overlaps[0].size() << endl;
+
     // for (int i=0; i<n; i++){
     //     for (int j=0; j<n; j++){
-    //         cout << oligo_distances[i][j] << " ";
+    //         cout << oligo_overlaps[i][j] << " ";
     //     }
-    //     cout << endl;
+    //     cout << endl << endl;
     // }
 
 
-    /* ------test pheromones------ */
+    // /* ------test pheromones------ */
     // for (int i=0; i<n; i++){
     //     for (int j=0; j<n; j++){
     //         cout << T[i][j] << " ";

@@ -2,8 +2,8 @@ import random
 import copy
 
 NUCLEOTIDES = ['A', 'C', 'G', 'T']
-N = 200 # sequence length
-K = 8 # slice length
+N = 100 # sequence length
+K = 4 # slice length
 NEG = int(0.06 * (N-K+1)) # negative error percentage
 POS = int(0.1 * (N-K+1)) # positive error percentage
 
