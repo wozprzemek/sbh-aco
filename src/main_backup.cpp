@@ -278,13 +278,12 @@ int main(int argc, char * argv[]) {
 
     srand(time(NULL));
     double minimum = 1000000;
-    int iteration_number = 10;
+    int iteration_number = 50;
     vector<int> path;
     string filename = argv[1];
     double Lk;
     Constants c;
     vector<int> shortest_path;
-    vector<int> last_shortest_path;
     string start_sequence;
     string starting_oligo;
     int starting_oligo_index;
@@ -355,14 +354,17 @@ int main(int argc, char * argv[]) {
 
     vector<Ant> ants = spawn_ants(ant_number, starting_oligo_index); //spawn all ants
 
-    int t = 0;
-    int reset_counter = 0;
-    int reset_threshold = 10;
     // cout << "ANTS SPAWNED" << endl;
+
+    string final_sequence_tmp = "";
+    int repeat_counter = 0; // same final sequence counter
+    int repeat_threshold = 5; // amount of times the final sequence can be repeated until algorithm ends
+    int t = 0;
 
     //MAIN LOOP
     // for (int t = 0; t < iteration_number; t++) {
-    while (t < iteration_number && reset_counter < reset_threshold) {
+    while (t < iteration_number && repeat_counter < repeat_threshold) {
+    // while (final_sequence.size() != n) {
         cout << "ITERATION " << t << endl;
 
         // MOVE LOOP
@@ -383,7 +385,6 @@ int main(int argc, char * argv[]) {
                 minimum = Lk; //check if the path is the shortest yet
                 shortest_path = ants[l].path;
             }
-
             ants[l].reset(oligo_count, starting_oligo_index);
 
         }
@@ -391,17 +392,24 @@ int main(int argc, char * argv[]) {
         // cout << "   TRAILS UPDATED" << endl;
 
         T = evaporate_trail_levels(T, c, oligo_count); //evaporate all pheromones
-        if (last_shortest_path == shortest_path) {
-            cout << "Same!" << endl;
-            reset_counter++;
-        }
-        else { 
-            reset_counter = 0;
+        
+        for (int i=0; i<oligo_count; i++){
+            // cout << spectrum[shortest_path[i]].sequence << " ";
+            final_spectrum.push_back(spectrum[shortest_path[i]]);
         }
 
+        string final_sequence = join_sequence(final_spectrum, k, n);
+        cout << final_sequence << endl;
         t++;
-        last_shortest_path = shortest_path;
-        
+
+        if (final_sequence == final_sequence_tmp) {
+            repeat_counter++;
+        }
+        else {
+            repeat_counter = 0;
+        }
+
+        final_sequence_tmp = final_sequence;
 
         // cout << "   TRAILS EVAPORATED" << endl;
         // cout << "ITERATION " << t << "END" << endl;

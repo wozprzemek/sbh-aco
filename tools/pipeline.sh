@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# generate the instance first
-python3 instance_generator.py
+for i in {1..2}
+do
+    # generate the instance first
+    python3 instance_generator.py
 
-# run the aco algorithm
-g++ ../src/main.cpp -O3 -o ../src/main
-../src/main ../src/input.txt
+    # run the aco algorithm
+    g++ ../src/main.cpp -O3 -o ../src/main
+    ../src/main ../src/input.txt
 
-# plot the results
-# python3 plot_results.py
+    # compare the sequences
+    python3 accuracy.py ../src/output.txt
+done
