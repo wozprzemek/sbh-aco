@@ -11,6 +11,7 @@
 #include <fstream>
 
 using namespace std;
+using namespace std::chrono_literals;
 
 double PCFreq = 0.0;
 // __int64 CounterStart = 0;
@@ -63,10 +64,10 @@ public:
     Constants c;
 
     Ant(int oligo_count, int starting_index) {
-        this->current_oligo_index = starting_index; //setting the starting point as 1 (for now) ->[spawn_ants]
+        this->current_oligo_index = starting_index; //setting the starting point
         this->path.push_back(starting_index);
 
-        //filling the not_visited set, starting from the point after 1 (for now) ->[spawn_ants]
+        //filling the not_visited set
         for (int i = 0; i < oligo_count; i++) {
             if (i != starting_index) {
                 not_visited.insert(i);
@@ -93,19 +94,15 @@ public:
         double p_n; //numerator probability
         double p_d = 0.0; //denominator probability
         double sum = 0;
-        // cout << "random " << random << endl;
-        // cout << "not visited size " << not_visited.size() << endl;
+
+        for (set<int>::iterator j = not_visited.begin(); j != not_visited.end(); j++) {
+            p_d += (pow(T[current_oligo_index][*j], c.alpha)) * (pow(oligo_visibilities[current_oligo_index][*j], c.beta)); //denominator probability
+        }
+
         for (set<int>::iterator i = not_visited.begin(); i != not_visited.end(); i++) { //iterate over not visited cities
-            p_d = 0.0;
             /*PART 1--------calculate probability for a oligo-----------*/
             p_n = (pow(T[current_oligo_index][*i], c.alpha)) * (pow(oligo_visibilities[current_oligo_index][*i], c.beta)); //numerator probability
-            for (set<int>::iterator j = not_visited.begin(); j != not_visited.end(); j++) {
-                p_d += (pow(T[current_oligo_index][*j], c.alpha)) * (pow(oligo_visibilities[current_oligo_index][*j], c.beta)); //denominator probability
-            }
             probability = p_n / p_d;
-            // cout << " probability " << probability << endl;
-            // cout << "random " << random << " prob " << probability << endl;
-
             /*PART 2--------try to select the oligo for which the probability was calculated-----------*/
             random -= probability;
             if (random <= 0) {
@@ -119,19 +116,6 @@ public:
     }
 
 };
-
-
-// vector<Oligo> read_spectrum(ifstream infile, string filename) {
-//     vector<Oligo> spectrum;
-//     string oligo;
-//     cout << "Aaa";
-//     while (infile >> oligo){
-//         spectrum.push_back(Oligo(1, "a"));
-//     }
-
-//     return spectrum;
-// }
-
 
 int overlap(std::string a, std::string b, int len) {
     int overlap_score = len;
@@ -164,7 +148,7 @@ double calculate_lk(Ant ant, vector<vector<int>> overlaps, int oligo_count) {
 vector<vector<double>> update_trail_levels(Ant ant, double Lk, vector<vector<double>> T, Constants c, int oligo_count) {
     vector<vector<double>> pheromone_levels = T;
     for (int i = 1; i < oligo_count; i++) { //add the pheromones along the ant's path
-        pheromone_levels[ant.path[i - 1]][ant.path[i]] += c.Q / Lk;
+        pheromone_levels[ant.path[i - 1]][ant.path[i]] += c.Q / Lk; 
     }
 
     return pheromone_levels;
@@ -276,18 +260,23 @@ int find_starting_oligo(string oligo,vector<Oligo> spectrum) {
 
 int main(int argc, char * argv[]) {
 
+    using std::chrono::high_resolution_clock;
+    using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using std::chrono::milliseconds;
+
     srand(time(NULL));
     double minimum = 1000000;
-    int iteration_number = 50;
+    int iteration_number = 100;
     vector<int> path;
     string filename = argv[1];
     double Lk;
     Constants c;
     vector<int> shortest_path;
+    vector<int> last_shortest_path;
     string start_sequence;
     string starting_oligo;
     int starting_oligo_index;
-    // string final_sequence = "";
     
     // read parameters
     ifstream infile(filename);
@@ -354,18 +343,19 @@ int main(int argc, char * argv[]) {
 
     vector<Ant> ants = spawn_ants(ant_number, starting_oligo_index); //spawn all ants
 
-    // cout << "ANTS SPAWNED" << endl;
-
-    string final_sequence_tmp = "";
-    int repeat_counter = 0; // same final sequence counter
-    int repeat_threshold = 5; // amount of times the final sequence can be repeated until algorithm ends
     int t = 0;
+    int reset_counter = 0;
+    int reset_threshold = 10;
+    // cout << "ANTS SPAWNED" << endl;
 
     //MAIN LOOP
     // for (int t = 0; t < iteration_number; t++) {
-    while (t < iteration_number && repeat_counter < repeat_threshold) {
-    // while (final_sequence.size() != n) {
+    while (t < iteration_number && reset_counter < reset_threshold) {
+        auto main_loop_t1= high_resolution_clock::now();
+
         cout << "ITERATION " << t << endl;
+
+        auto move_loop_t1 = high_resolution_clock::now();
 
         // MOVE LOOP
         for (int oligo = 0; oligo < oligo_count; oligo++) { //iterate over cities
@@ -374,7 +364,14 @@ int main(int argc, char * argv[]) {
             }
         }
 
+        cout << "MOVE LOOP" << endl;
+        auto move_loop_t2 = high_resolution_clock::now();
+        duration<double, std::milli> move_loop_time = move_loop_t2 - move_loop_t1;
+        cout << move_loop_time.count() << "ms\n";
+
         // cout << "   ANTS MOVED" << endl;
+
+        auto update_loop_t1 = high_resolution_clock::now();
 
         // RESET AND UPDATE LOOP
         for (int l = 0; l < ant_number; l++) { //iterate over ants
@@ -385,51 +382,41 @@ int main(int argc, char * argv[]) {
                 minimum = Lk; //check if the path is the shortest yet
                 shortest_path = ants[l].path;
             }
+
             ants[l].reset(oligo_count, starting_oligo_index);
 
         }
 
+        cout << "UPDATE LOOP" << endl;
+        auto update_loop_t2 = high_resolution_clock::now();
+        duration<double, std::milli> update_loop_time = update_loop_t2 - update_loop_t1;
+        cout << update_loop_time.count() << "ms\n";
+
         // cout << "   TRAILS UPDATED" << endl;
 
+        auto evaporate_t1 = high_resolution_clock::now();
+
         T = evaporate_trail_levels(T, c, oligo_count); //evaporate all pheromones
-        
-        for (int i=0; i<oligo_count; i++){
-            // cout << spectrum[shortest_path[i]].sequence << " ";
-            final_spectrum.push_back(spectrum[shortest_path[i]]);
+        if (last_shortest_path == shortest_path) {
+            cout << "Same!" << endl;
+            reset_counter++;
+        }
+        else { 
+            reset_counter = 0;
         }
 
-        string final_sequence = join_sequence(final_spectrum, k, n);
-        cout << final_sequence << endl;
+        cout << "EVAPORATE" << endl;
+        auto evaporate_t2 = high_resolution_clock::now();
+        duration<double, std::milli> evaporate_time = evaporate_t2 - evaporate_t1;
+        cout << evaporate_time.count() << "ms\n";
+
         t++;
-
-        if (final_sequence == final_sequence_tmp) {
-            repeat_counter++;
-        }
-        else {
-            repeat_counter = 0;
-        }
-
-        final_sequence_tmp = final_sequence;
-
-        // cout << "   TRAILS EVAPORATED" << endl;
-        // cout << "ITERATION " << t << "END" << endl;
-        // cout << endl;
-        // cout << "Shortest path: ";
-        // cout << endl;
-        /* ------test pheromones------ */
-        // for (int i = 0; i < n; i++) {
-        //     for (int j = 0; j < n; j++) {
-        //         cout << T[i][j] << " ";
-        //     }
-        //     cout << endl;
-        // }
-
-        // for (int i=0; i<oligo_count; i++){
-        //     // cout << spectrum[shortest_path[i]].sequence << " ";
-        //     final_spectrum.push_back(spectrum[shortest_path[i]]);
-        // }
-
-        // final_sequence = join_sequence(final_spectrum, k);
+        last_shortest_path = shortest_path;
+        
+        cout << "MAIN LOOP" << endl;
+        auto main_loop_t2 = high_resolution_clock::now();
+        duration<double, std::milli> main_loop_time = main_loop_t2 - main_loop_t1;
+        cout << main_loop_time.count() << "ms\n\n";
     }
     // cout << "Minimum: " << minimum << endl;
     cout << "--Final spectrum:  ";
