@@ -10,6 +10,10 @@
 #include <time.h>
 
 using namespace std::chrono_literals;
+using std::chrono::high_resolution_clock;
+using std::chrono::duration_cast;
+using std::chrono::duration;
+using std::chrono::milliseconds;
 
 Ant::Ant(int oligoCount, int startingIndex) {
     this->currentOligoIndex = startingIndex; //setting the starting point
@@ -43,10 +47,17 @@ void Ant::move(std::vector<std::vector<double>> T, std::vector<std::vector<doubl
     double pD = 0.0; //denominator probability
     double sum = 0;
 
+    // std::cout << notVisited.size() << std::endl;
+    // auto move_t1 = high_resolution_clock::now();
+    // std::cout << "\tmove: " << move_time.count() << "ms\n";
     for (std::set<int>::iterator j = notVisited.begin(); j != notVisited.end(); j++) {
         pD += (pow(T[currentOligoIndex][*j], ALPHA)) * (pow(oligoVisibilities[currentOligoIndex][*j], BETA)); //denominator probability
     }
+    // auto move_t2 = high_resolution_clock::now();
+    // duration<double, std::milli> pd_time = move_t2 - move_t1;
+    // std::cout << "\tpd: " << pd_time.count() << "ms\n";
 
+    // move_t1 = high_resolution_clock::now();
     for (std::set<int>::iterator i = notVisited.begin(); i != notVisited.end(); i++) { //iterate over not visited cities
         /*PART 1--------calculate probability for a oligo-----------*/
         pN = (pow(T[currentOligoIndex][*i], ALPHA)) * (pow(oligoVisibilities[currentOligoIndex][*i], BETA)); //numerator probability
@@ -63,6 +74,10 @@ void Ant::move(std::vector<std::vector<double>> T, std::vector<std::vector<doubl
             break;
         }
     }
+    // move_t2 = high_resolution_clock::now();
+    // duration<double, std::milli> pn_time = move_t2 - move_t1;
+    // std::cout << "\tpn: " << pn_time.count() << "ms\n";
+    // std::cout << pd_time / pn_time << std::endl;
 }
 
 Oligo::Oligo(int index, std::string sequence) {
@@ -213,11 +228,14 @@ int ACO::findStartingOligo(std::string oligo) {
 void ACO::moveAnts() {
     for (int oligo = 0; oligo < this->oligoCount ; oligo++) { //iterate over cities
         for (int l = 0; l < this->antNumber; l++) { //iterate over ants
+            auto move_t1 = high_resolution_clock::now();
             this->ants[l].move(T, this->oligoVisibilities); //move each ant
+            auto move_t2 = high_resolution_clock::now();
+            duration<double, std::milli> move_time = move_t2 - move_t1;
+            // std::cout << "\tmove: " << move_time.count() << "ms\n";
         }
     }
 }
-
 
 void ACO::resetAnts() {
     for (int l = 0; l < this->antNumber; l++) { //iterate over cities
@@ -226,15 +244,11 @@ void ACO::resetAnts() {
 }
 
 std::string ACO::optimize() {
-    using std::chrono::high_resolution_clock;
-    using std::chrono::duration_cast;
-    using std::chrono::duration;
-    using std::chrono::milliseconds;
     int it = 0, resetCounter = 0;
 
     time_t endwait;
     time_t start = time(NULL);
-    time_t sec = 1000;
+    time_t sec = 600;
 
     endwait = start + sec;
 
@@ -246,7 +260,7 @@ std::string ACO::optimize() {
         this->moveAnts();
         auto move_loop_t2 = high_resolution_clock::now();
         duration<double, std::milli> move_loop_time = move_loop_t2 - move_loop_t1;
-        std::cout << "move: " << move_loop_time.count() << "ms\n";
+        std::cout << "move loop: " << move_loop_time.count() << "ms\n";
         this->updateTrailLevels();
         this->resetAnts();
         this->evaporateTrailLevels();
