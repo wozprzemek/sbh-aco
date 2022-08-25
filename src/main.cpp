@@ -13,6 +13,10 @@
 
 using namespace std;
 using namespace std::chrono_literals;
+using std::chrono::high_resolution_clock;
+using std::chrono::duration_cast;
+using std::chrono::duration;
+using std::chrono::milliseconds;
 
 void readInput(string filename, int& startSeqenceLength, int& oligoLength, string& startSequence, vector<Oligo>& spectrum) {
     ifstream infile(filename);
@@ -31,38 +35,45 @@ void readInput(string filename, int& startSeqenceLength, int& oligoLength, strin
     infile.close();
 }
 
-void writeResult(string filename, string startSequence, string finalSequence) {
+void writeResult(string filename, string startSequence, string finalSequence, duration<double, std::milli> main_loop_time) {
     ofstream outfile(filename);
-    outfile << startSequence << endl << finalSequence;
+    outfile << main_loop_time.count() << endl << startSequence << endl << finalSequence;
     outfile.close();
 }
 
 int main(int argc, char * argv[]) {
-
-    if (argc != 4) {
-        cout << "Provide all arguments <inputfile, iterations, antnumber>.\n";
+    if (argc != 6) {
+        cout << "Provide all arguments <inputfile, antnumber, alpha, beta, rho>.\n";
         return 0;
     }
 
-    int startSeqenceLength, oligoLength, iterations = atoi(argv[2]), antNumber = atoi(argv[3]);
+    int startSeqenceLength, oligoLength, antNumber = atoi(argv[2]);
+    double alpha = atof(argv[3]), beta = atof(argv[4]), rho = atof(argv[5]);
     string filename = argv[1], startSequence, finalSequence;
     vector<Oligo> spectrum;
     readInput(filename, startSeqenceLength, oligoLength, startSequence, spectrum);
 
-    ACO aco = ACO(startSeqenceLength, oligoLength, startSequence, spectrum, iterations, antNumber);
+    ACO aco = ACO(startSeqenceLength, oligoLength, startSequence, spectrum, antNumber, alpha, beta, rho);
 
     cout << aco.antNumber << endl;
 
-    aco.init();
+    auto main_loop_t1 = high_resolution_clock::now();
 
-    cout << "Init done" << endl;
-    finalSequence = aco.optimize();
+        aco.init();
 
-    cout << endl << endl;
-    cout << startSequence << endl;
-    cout << finalSequence << endl << endl;
+        cout << "Init done" << endl;
+        finalSequence = aco.optimize();
 
-    writeResult("../src/output.txt", startSequence, finalSequence);
+        cout << endl << endl;
+        cout << startSequence << endl;
+        cout << finalSequence << endl << endl;
+
+    auto main_loop_t2 = high_resolution_clock::now();
+    duration<double, std::milli> main_loop_time = main_loop_t2 - main_loop_t1;
+    
+    std::cout << "time: " << main_loop_time.count() << "ms\n";
+
+    writeResult("../src/output.txt", startSequence, finalSequence, main_loop_time);
 
 }
 

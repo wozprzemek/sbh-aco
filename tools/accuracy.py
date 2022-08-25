@@ -3,14 +3,14 @@ import sys
 
 filename = sys.argv[1]
 
-sequences = []
+data = []
 
 with open(filename) as infile:
-    sequences = infile.read().splitlines()
+    data = infile.read().splitlines()
 
-accuracy = lev.ratio(sequences[0], sequences[1])
+accuracy = lev.ratio(data[1], data[2])
 
 with open('../src/results.txt', 'a') as outfile:
-    outfile.write(str(accuracy) + " " + sequences[0] + " " + sequences[1] + "\n")
+    outfile.write(str(accuracy) + " " + data[0] + " " + data[1] + " " + data[2] + "\n")
 
 

@@ -1,6 +1,6 @@
 #define Q 10
 
-#define RO 0.8
+#define RHO 0.8
 
 #define ALPHA 1
 

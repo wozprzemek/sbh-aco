@@ -10,9 +10,9 @@ public:
     int currentOligoIndex;
     std::vector <int> path;
     std::set<int> notVisited;
-    double Lk;
+    double Lk, alpha, beta, rho;
 
-    Ant(int oligoCount, int startingIndex);
+    Ant(int oligoCount, int startingIndex, double alpha, double beta, double rho);
 
     void reset(int oligoCount, int startingIndex);
     void move(std::vector<std::vector<double>> T, std::vector<std::vector<double>> oligoVisibilities);
@@ -30,8 +30,8 @@ public:
 
 class ACO {
 public:
-    int startSeqenceLength, oligoLength, iterations, oligoCount, antNumber, startingOligoIndex, resetThreshold=10, minimum;
-    double Lk;
+    int startSeqenceLength, oligoLength, oligoCount, antNumber, startingOligoIndex, resetThreshold=20, minimum;
+    double Lk, alpha, beta, rho;
     std::string startSequence, startingOligo;
     std::vector<Oligo> spectrum, finalSpectrum;
     std::vector<int> shortestPath, lastShortestPath;
@@ -41,7 +41,7 @@ public:
     std::vector<Ant> ants;
     
 
-	ACO(int startSeqenceLength, int oligoLength, std::string startSequence, std::vector<Oligo> spectrum, int iterations, int antNumber);
+	ACO(int startSeqenceLength, int oligoLength, std::string startSequence, std::vector<Oligo> spectrum, int antNumber, double alpha, double beta, double rho);
 
     void init();
     std::string optimize();

@@ -15,9 +15,12 @@ using std::chrono::duration_cast;
 using std::chrono::duration;
 using std::chrono::milliseconds;
 
-Ant::Ant(int oligoCount, int startingIndex) {
+Ant::Ant(int oligoCount, int startingIndex, double alpha, double beta, double rho) {
     this->currentOligoIndex = startingIndex; //setting the starting point
     this->path.push_back(startingIndex);
+    this->alpha = alpha;
+    this->beta = beta;
+    this->rho = rho;
 
     //filling the notVisited set
     for (int i = 0; i < oligoCount; i++) {
@@ -47,37 +50,25 @@ void Ant::move(std::vector<std::vector<double>> T, std::vector<std::vector<doubl
     double pD = 0.0; //denominator probability
     double sum = 0;
 
-    // std::cout << notVisited.size() << std::endl;
-    // auto move_t1 = high_resolution_clock::now();
-    // std::cout << "\tmove: " << move_time.count() << "ms\n";
     for (std::set<int>::iterator j = notVisited.begin(); j != notVisited.end(); j++) {
-        pD += (pow(T[currentOligoIndex][*j], ALPHA)) * (pow(oligoVisibilities[currentOligoIndex][*j], BETA)); //denominator probability
+        pD += (pow(T[currentOligoIndex][*j], this->alpha)) * (pow(oligoVisibilities[currentOligoIndex][*j], this->beta)); //denominator probability
     }
-    // auto move_t2 = high_resolution_clock::now();
-    // duration<double, std::milli> pd_time = move_t2 - move_t1;
-    // std::cout << "\tpd: " << pd_time.count() << "ms\n";
 
-    // move_t1 = high_resolution_clock::now();
     for (std::set<int>::iterator i = notVisited.begin(); i != notVisited.end(); i++) { //iterate over not visited cities
         /*PART 1--------calculate probability for a oligo-----------*/
-        pN = (pow(T[currentOligoIndex][*i], ALPHA)) * (pow(oligoVisibilities[currentOligoIndex][*i], BETA)); //numerator probability
+        pN = (pow(T[currentOligoIndex][*i], this->alpha)) * (pow(oligoVisibilities[currentOligoIndex][*i], this->beta)); //numerator probability
 
         probability = pN / pD;
 
         /*PART 2--------try to select the oligo for which the probability was calculated-----------*/
         random -= probability;
         if (random <= 0) {
-            // cout << "random after subtraction " << random << endl;
             currentOligoIndex = *i;
             path.push_back(currentOligoIndex); //add selected oligo to ant's path
             notVisited.erase(i); //remove selected oligo from not visited
             break;
         }
     }
-    // move_t2 = high_resolution_clock::now();
-    // duration<double, std::milli> pn_time = move_t2 - move_t1;
-    // std::cout << "\tpn: " << pn_time.count() << "ms\n";
-    // std::cout << pd_time / pn_time << std::endl;
 }
 
 Oligo::Oligo(int index, std::string sequence) {
@@ -85,13 +76,15 @@ Oligo::Oligo(int index, std::string sequence) {
     this->sequence = sequence;
 }
 
-ACO::ACO(int startSeqenceLength, int oligoLength, std::string startSequence, std::vector<Oligo> spectrum, int iterations, int antNumber) {
+ACO::ACO(int startSeqenceLength, int oligoLength, std::string startSequence, std::vector<Oligo> spectrum, int antNumber, double alpha, double beta, double rho) {
     this->startSeqenceLength = startSeqenceLength;
     this->oligoLength = oligoLength;
     this->startSequence = startSequence;
     this->spectrum = spectrum;
-    this->iterations = iterations;
     this->antNumber = antNumber;
+    this->alpha = alpha;
+    this->beta = beta;
+    this->rho = rho;
 }
 
 void ACO::init() {
@@ -145,7 +138,7 @@ void ACO::updateTrailLevels() {
 void ACO::evaporateTrailLevels() {
     for (int i = 0; i < oligoCount; i++) {
         for (int j = 0; j < oligoCount; j++) {
-            this->T[i][j] = this->T[i][j] * RO;  //evaporate the pheromones on all possible paths
+            this->T[i][j] = this->T[i][j] * this->rho;  //evaporate the pheromones on all possible paths
         }
     }
 }
@@ -200,7 +193,7 @@ void ACO::initializePheromones() {
 
 void ACO::spawnAnts() {
     for (int i = 0; i < this->oligoCount; i++) {
-        Ant ant(this->oligoCount, this->startingOligoIndex);
+        Ant ant(this->oligoCount, this->startingOligoIndex, this->alpha, this->beta, this->rho);
         this->ants.push_back(ant);
     }
 }
@@ -244,23 +237,13 @@ void ACO::resetAnts() {
 }
 
 std::string ACO::optimize() {
-    int it = 0, resetCounter = 0;
+    int it = 0, resetCounter = 0, iterations = 100;
 
-    time_t endwait;
-    time_t start = time(NULL);
-    time_t sec = 600;
-
-    endwait = start + sec;
 
     // Main Loop
-    while (start < endwait && resetCounter < this->resetThreshold) {
-        auto main_loop_t1 = high_resolution_clock::now();
+    while (it < iterations && resetCounter < this->resetThreshold) {
         std::cout << it << std::endl;
-        auto move_loop_t1 = high_resolution_clock::now();
         this->moveAnts();
-        auto move_loop_t2 = high_resolution_clock::now();
-        duration<double, std::milli> move_loop_time = move_loop_t2 - move_loop_t1;
-        std::cout << "move loop: " << move_loop_time.count() << "ms\n";
         this->updateTrailLevels();
         this->resetAnts();
         this->evaporateTrailLevels();
@@ -275,17 +258,9 @@ std::string ACO::optimize() {
 
         it++;
         this->lastShortestPath = this->shortestPath;
-        start = time(NULL);
-        auto main_loop_t2 = high_resolution_clock::now();
-        duration<double, std::milli> main_loop_time = main_loop_t2 - main_loop_t1;
-        std::cout << "main: " << main_loop_time.count() << "ms\n";
-        std::cout << move_loop_time.count() / main_loop_time.count() * 100 << std::endl;
     }
 
-    std::cout << this->shortestPath.size() << std::endl;
-
     for (int i=0; i<this->oligoCount; i++){
-        std::cout << this->spectrum[this->shortestPath[i]].sequence << " ";
         this->finalSpectrum.push_back(this->spectrum[this->shortestPath[i]]);
     }
 
